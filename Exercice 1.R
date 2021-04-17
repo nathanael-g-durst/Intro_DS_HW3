@@ -39,5 +39,6 @@ find_pi = function(B = 50000, seed = 10, make_plot = TRUE){
   return(hat_pi)
 }
 
+
 find_pi(make_plot = TRUE)
 
