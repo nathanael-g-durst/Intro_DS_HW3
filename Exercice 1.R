@@ -9,7 +9,7 @@ find_pi = function(B = 50000, seed = 10, make_plot = TRUE){
   # Simulate B points
   point = matrix(runif(2*B, -1, 1), B, 2)
   
-  # generate the x1 and x2 co-ordinates from uniform
+  # generate the x and y co-ordinates from uniform
   # distribution taking values from -1 to 1
   x<-runif(n, min=-1, max=1)
   y<-runif(n, min=-1, max=1)
