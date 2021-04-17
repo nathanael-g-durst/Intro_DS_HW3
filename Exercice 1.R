@@ -21,9 +21,8 @@ find_pi = function(B = 50000, seed = 10, make_plot = TRUE){
   hat_pi = 4*sum((z<=1))/length(z)
   
   InOut<-as.factor(ifelse(z<=1, "In", "Out"))
-  
-  plot(x,y,pch = 19, col=InOut, main="Estimate PI with Monte Carlo")
-  
+
+  if (make_plot == "TRUE"){
   plot(x,y,
        main="Estimate PI with Monte Carlo",
        xlim = c(-1,1),
@@ -35,6 +34,8 @@ find_pi = function(B = 50000, seed = 10, make_plot = TRUE){
        grid())
   rect( -1, -1, 1, 1) 
   draw.circle( 0, 0, 1 )
+  }else{
+  }
   return(hat_pi)
 }
 
