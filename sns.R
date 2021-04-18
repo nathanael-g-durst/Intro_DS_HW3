@@ -18,6 +18,6 @@ get_position=function(d_1_hate, d_2_hate,d_3_hate){
   est = optim(par=c(0,0,0), fn=obj_func)$par
   cat("x=",est[1],"y=",est[2])
 }
-  // ca me donne des resultats différents  ,,,,,, get_position(453.2136,288.8427,418.3106) ca me donne 
-x= -16.68395 y= 171.0875  !!!!
+  ### ca me donne des resultats différents  ,,,,,, get_position(453.2136,288.8427,418.3106) ca me donne 
+x= -16.68395 y= 171.0875  !!!! #########
 
