@@ -1,0 +1,212 @@
+---
+title: "Homework 3: Solution"
+output: html_document
+---
+
+# Problem 1: Finding $\pi$
+
+We first develop a few auxiliary functions: 
+
+```{r}
+# to draw a square on an existing plot
+make_square = function(bottom_left = c(-1,-1), side = 2, col = "darkblue", fill = NULL){
+  lines(c(bottom_left, bottom_left), c(bottom_left + side, bottom_left), col = col)
+  lines(c(bottom_left + side, bottom_left), c(bottom_left + side, bottom_left + side), col = col)
+  lines(c(bottom_left + side, bottom_left + side), c(bottom_left, bottom_left + side), col = col)
+  lines(c(bottom_left, bottom_left + side), c(bottom_left, bottom_left), col = col)
+  if (!is.null(fill)){
+    polygon(c(bottom_left, bottom_left+side, bottom_left+side, bottom_left), c(bottom_left, bottom_left, bottom_left+side, bottom_left+side), border = NULL, col = fill)
+  }
+}
+
+# to draw a circle on an existing plot
+make_circle = function(center = c(0,0), radius = 1,  nb_step = 300, col = "darkblue", fill = NULL, lty = 1){
+  my_points = seq(from = 0, to = 2*pi, length.out = nb_step)
+  coords = cbind(radius*cos(my_points) + center[1], radius*sin(my_points) + center[2])
+  lines(coords, col = col, lty = lty)
+  if (!is.null(fill)){
+    polygon(c(coords[,1]), c(coords[,2]), col = fill, border = NULL)
+  }
+}
+
+# to compute if a point is inside the unit circle
+inside_unit_circle = function(x){
+  # Compute squared distance from center
+  d = x[1]^2 + x[2]^2
+  (d < 1)
+}
+```
+
+Then we can compute $\pi$ as follows:
+
+```{r}
+find_pi = function(B = 5000, seed = 10, make_plot = TRUE){
+  # Control seed
+  set.seed(seed)
+  
+  # Simulate B points
+  point = matrix(runif(2*B, -1, 1), B, 2)
+  
+  # Compute the number of points inside unit circle
+  nb_inside = apply(point, 1, inside_unit_circle)
+  pi_hat = sum(nb_inside)/B
+  
+  # Make plot
+  if (make_plot){
+    plot(NA, xlim = c(-1.1,1.1), ylim = c(-1.1,1.1), xlab = "x", ylab = "y")
+    make_square()
+    cols = hcl(h = seq(15, 375, length = 3), l = 65, c = 100, alpha = 0.2)[1:2]
+    grid()
+    for (i in 1:B){
+      points(point[i,1], point[i,2], pch = 16, col = cols[1 + nb_inside[i]])
+    }
+    make_circle()
+  }
+  
+  # return estimated value of pi
+  return(4*pi_hat)
+}
+```
+
+```{r, fig.align='center', fig.width=5, fig.height=5}
+find_pi(make_plot = TRUE)
+```
+
+
+# Problem 2: Satellite Navigation System
+
+We first construct the objective function to minimize:
+
+```{r}
+obj_gnss = function(theta, distance){
+  x = c(-300, 300, 0)
+  y = c( 300, 300, -300)
+  x0 = theta[1]
+  y0 = theta[2]
+  epsilon = theta[3]
+  sum(((x0 - x)^2 + (y0 - y)^2 - (distance - epsilon)^2)^2)
+}
+```
+
+Then we can compute our position as follows:
+
+```{r}
+get_position = function(distance, start = rep(0, 3)){
+  if (is.matrix(distance)){
+    nb_points = dim(distance)[1]
+    results = matrix(NA, nb_points, 3)
+    for (i in 1:nb_points){
+      results[i,] = optim(start, obj_gnss, distance = distance[i,])$par[1:3]
+    }
+    class(results) = "gnssmat"
+  }else{
+    results = optim(start, obj_gnss, distance = distance)
+    results[[6]] = distance
+    names(results) = c(names(results)[1:5], "distance")
+    class(results) = "gnssvect"
+  }
+  results
+}
+
+summary.gnssvect = function(position){
+  cat("The estimated position is:\n")
+  cat("X = ")
+  cat(round(position$par[1],4))
+  cat("\n")
+  cat("Y = ")
+  cat(round(position$par[2],4))
+  cat("\n\n")
+}
+```
+
+We can also write the functions to plot our result:
+
+```{r}
+# if the input is a vector
+plot.gnssvect = function(position, show.distance = FALSE, add = FALSE){
+  cols = hcl(h = seq(15, 375, length = 4), l = 65, c = 100)[1:3]
+  
+  if (add == FALSE){
+    cols_trans = hcl(h = seq(15, 375, length = 4), l = 65, c = 100, alpha = 0.75)[1:3]
+    plot(NA, xlim = c(-310, 310), ylim = c(-310, 310), xlab = "x", ylab = "y")
+    grid()
+    make_circle(fill = "lightgrey", radius = 200)
+    make_circle(radius = 20, center = c(-300, 300), col = "red", fill = cols[1])
+    make_circle(radius = 20, center = c(300, 300), col = "red", fill = cols[2])
+    make_circle(radius = 20, center = c(0, -300), col = "red", fill = cols[3])
+  
+    if (show.distance == TRUE){
+      make_circle(radius = position$distance[1], center = c(-300, 300), col = cols_trans[1])
+      make_circle(radius = position$distance[2], center = c(300, 300), col = cols_trans[2])
+      make_circle(radius = position$distance[3], center = c(0, -300), col = cols_trans[3])
+    }
+  }
+  points(position$par[1], position$par[2], pch = "x", cex = 1.3, col = "orange2")
+}
+
+# if the input is a matrix
+plot.gnssmat = function(position){
+  cols = hcl(h = seq(15, 375, length = 4), l = 65, c = 100)[1:3]
+  cols_trans = hcl(h = seq(15, 375, length = 4), l = 65, c = 100, alpha = 0.75)[1:3]
+  plot(NA, xlim = c(-310, 310), ylim = c(-310, 310), xlab = "x", ylab = "y")
+  grid()
+  make_circle(fill = "lightgrey", radius = 200)
+  make_circle(radius = 20, center = c(-300, 300), col = "red", fill = cols[1])
+  make_circle(radius = 20, center = c(300, 300), col = "red", fill = cols[2])
+  make_circle(radius = 20, center = c(0, -300), col = "red", fill = cols[3])
+  
+  for (i in 1:dim(position)[1]){
+    points(position[i,1], position[i,2], pch = "x", cex = 1.3, col = "orange2")
+  }
+}
+```
+
+Let's try the functions out! 
+
+```{r}
+# if the input is a vector
+position = get_position(c(453.2136, 288.8427, 418.3106))
+summary(position)
+plot(position)
+```
+
+```{r, echo = F}
+# compute d hat
+get_distance = function(x0, y0, epsilon){
+  x = c(-300, 300, 0)
+  y = c( 300, 300, -300)
+  d = sqrt((x0 - x)^2 + (y0 - y)^2) + epsilon
+  return(d)
+}
+
+p1 = c(80, 50)
+p2 = c(-80, 50)
+p3 = c(0, -20)
+p4 = c(0, -120)
+p5 = c(30, -115)
+p6 = c(-30, -115)
+p7 = c(60, -100)
+p8 = c(-60, -100)
+p9 = c(90, -70)
+p10 = c(-90, -70)
+
+dist_mat = matrix(NA, 10, 3)
+dist_mat[1,] = get_distance(p1[1], p1[2], rnorm(1,4,0.05))
+dist_mat[2,] = get_distance(p2[1], p2[2], rnorm(1,4,0.05))
+dist_mat[3,] = get_distance(p3[1], p3[2], rnorm(1,4,0.05))
+dist_mat[4,] = get_distance(p4[1], p4[2], rnorm(1,4,0.05))
+dist_mat[5,] = get_distance(p5[1], p5[2], rnorm(1,4,0.05))
+dist_mat[6,] = get_distance(p6[1], p6[2], rnorm(1,4,0.05))
+dist_mat[7,] = get_distance(p7[1], p7[2], rnorm(1,4,0.05))
+dist_mat[8,] = get_distance(p8[1], p8[2], rnorm(1,4,0.05))
+dist_mat[9,] = get_distance(p9[1], p9[2], rnorm(1,4,0.05))
+dist_mat[10,] = get_distance(p10[1], p10[2], rnorm(1,4,0.05))
+```
+
+```{r}
+# if the input is a matrix
+dist_mat
+position = get_position(dist_mat)
+plot(position)
+```
+
